@@ -1,0 +1,23 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Raumserver</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous"></link>
+
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+</head>
+<body>
+	<div class="container">
+	    <h1>Room Server Configuration</h1>
+	    <h2>Identification</h2>	
+		<h4> <span th:text="${roomserverId}" ></span></h4>
+	    <h2>Cloud Account</h2>	
+		<h4><span th:unless="${username}">not set</span><span th:text="${username}" ></span><a class="btn btn-link  btn-sm" href="/account" role="button">change</a></h4>	
+	</div>
+</body>
+</html>
