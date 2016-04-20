@@ -1,19 +1,29 @@
 package de.hhn.se.embedded.zigbee.raumserver;
 
 public class Command {
-	
-	private String target;
-	
+
+	private String targetDevice;
+
+	private String targetServer;
+
 	private String type;
-	
+
 	private float value;
 
-	public String getTarget() {
-		return target;
+	public String getTargetDevice() {
+		return targetDevice;
 	}
 
-	public void setTarget(String target) {
-		this.target = target;
+	public void setTargetDevice(String targetDevice) {
+		this.targetDevice = targetDevice;
+	}
+
+	public String getTargetServer() {
+		return targetServer;
+	}
+
+	public void setTargetServer(String targetServer) {
+		this.targetServer = targetServer;
 	}
 
 	public String getType() {

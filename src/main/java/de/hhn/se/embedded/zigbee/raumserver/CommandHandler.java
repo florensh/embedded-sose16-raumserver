@@ -20,7 +20,7 @@ public class CommandHandler {
 		try {
 			Command command = objectMapper.readValue(message, Command.class);
 			
-			if(command.getTarget().equalsIgnoreCase("heating")){
+			if(command.getTargetDevice().equalsIgnoreCase("heating")){
 				if(command.getType().equals("S")){
 					this.temperatureController.setNewTargetTemperature(command.getValue());
 				}
