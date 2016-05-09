@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.client.RestTemplate;
 
+import de.hhn.se.embedded.zigbee.raumserver.Device;
+import de.hhn.se.embedded.zigbee.raumserver.Device.Type;
 import de.hhn.se.embedded.zigbee.raumserver.Room;
 import de.hhn.se.embedded.zigbee.raumserver.User;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Configuration;
@@ -47,6 +49,7 @@ public class ConfigController {
 			data.setUsername(username.getParamValue());
 		}
 
+		
 		model.addAttribute("configDataObject", data);
 		return "account";
 	}
@@ -124,13 +127,23 @@ public class ConfigController {
 		restTemplate.getMessageConverters().add(
 				new MappingJackson2HttpMessageConverter());
 		Room r = new Room();
-		r.setRoomId(roomserverId);
-		HttpEntity<Room> request = new HttpEntity<Room>(r, headers);
+		r.setName("Testraum");
+		HttpEntity<Room> roomRequest = new HttpEntity<Room>(r, headers);
 		// String uri =
 		// "https://enigmatic-waters-31128.herokuapp.com/api/rooms/register";
-		String uri = "http://localhost:8081/api/rooms/register";
-		Room resp = restTemplate.postForObject(uri, request, Room.class);
-		System.out.println(resp.getRoomId());
+		String roomUri = "http://localhost:8081/api/rooms/"+roomserverId;
+		
+		restTemplate.put(roomUri, roomRequest);
+
+		String deviceUri = "http://localhost:8081/api/rooms/"
+				+ roomserverId + "/devices/"+roomserverId+"_"+Type.HEATING.name();
+		Device d = new Device();
+		d.setType(Type.HEATING.name());
+		d.setName("Heizung");
+		
+		HttpEntity<Device> deviceRequest = new HttpEntity<Device>(d, headers);
+		restTemplate.put(deviceUri, deviceRequest);
+//		System.out.println(resp2.getDeviceId());
 
 	}
 

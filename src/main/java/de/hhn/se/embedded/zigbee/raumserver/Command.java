@@ -2,9 +2,11 @@ package de.hhn.se.embedded.zigbee.raumserver;
 
 public class Command {
 
-	private String targetDevice;
+	public enum CommandType {
+		GET, SET
+	}
 
-	private String targetServer;
+	private String targetDevice;
 
 	private String type;
 
@@ -16,14 +18,6 @@ public class Command {
 
 	public void setTargetDevice(String targetDevice) {
 		this.targetDevice = targetDevice;
-	}
-
-	public String getTargetServer() {
-		return targetServer;
-	}
-
-	public void setTargetServer(String targetServer) {
-		this.targetServer = targetServer;
 	}
 
 	public String getType() {

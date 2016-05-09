@@ -9,15 +9,19 @@
 
 
 <!-- Latest compiled and minified JavaScript -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 </head>
 <body>
 	<div class="container">
-	    <h1>Room Server Configuration</h1>
-	    <h2>Identification</h2>	
-		<h4> <span th:text="${roomserverId}" ></span></h4>
-	    <h2>Cloud Account</h2>	
-		<h4><span th:unless="${username}">not set</span><span th:text="${username}" ></span><a class="btn btn-link  btn-sm" href="/account" role="button">change</a></h4>	
+		<div class="col-md-12">
+		    <h1>Room Server Configuration</h1>
+		    <h2>Identification</h2>	
+			<p> <span th:text="${roomserverId}" ></span></p>
+			<hr class="col-md-12"></hr>
+		    <h2>Cloud Account</h2>	
+			<p><span th:unless="${username}">not set</span><span th:text="${username}" ></span><a class="btn btn-link  btn-sm" href="/account" role="button">change</a></p>		
+		</div>
 	</div>
 </body>
 </html>
