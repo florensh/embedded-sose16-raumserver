@@ -5,7 +5,7 @@ import javax.persistence.Id;
 
 public class Device {
 	public enum Type {
-		HEATING, LIGHT
+		HEATING, SWITCH
 	}
 	
 	@Id

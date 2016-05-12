@@ -49,7 +49,6 @@ public class ConfigController {
 			data.setUsername(username.getParamValue());
 		}
 
-		
 		model.addAttribute("configDataObject", data);
 		return "account";
 	}
@@ -127,23 +126,29 @@ public class ConfigController {
 		restTemplate.getMessageConverters().add(
 				new MappingJackson2HttpMessageConverter());
 		Room r = new Room();
-		r.setName("Testraum");
+		// r.setName("Testraum");
 		HttpEntity<Room> roomRequest = new HttpEntity<Room>(r, headers);
 		// String uri =
 		// "https://enigmatic-waters-31128.herokuapp.com/api/rooms/register";
-		String roomUri = "http://localhost:8081/api/rooms/"+roomserverId;
-		
+		String roomUri = "http://localhost:8081/api/rooms/" + roomserverId;
+
 		restTemplate.put(roomUri, roomRequest);
 
-		String deviceUri = "http://localhost:8081/api/rooms/"
-				+ roomserverId + "/devices/"+roomserverId+"_"+Type.HEATING.name();
+		String deviceUri = "http://localhost:8081/api/rooms/" + roomserverId
+				+ "/devices/" + roomserverId + "_" + Type.HEATING.name();
 		Device d = new Device();
 		d.setType(Type.HEATING.name());
-		d.setName("Heizung");
-		
+
 		HttpEntity<Device> deviceRequest = new HttpEntity<Device>(d, headers);
 		restTemplate.put(deviceUri, deviceRequest);
-//		System.out.println(resp2.getDeviceId());
+
+		String deviceUri2 = "http://localhost:8081/api/rooms/" + roomserverId
+				+ "/devices/84a226b4-17db-11e6-b6ba-3e1d05defe78";
+		Device d2 = new Device();
+		d2.setType(Type.SWITCH.name());
+
+		HttpEntity<Device> deviceRequest2 = new HttpEntity<Device>(d2, headers);
+		restTemplate.put(deviceUri2, deviceRequest2);
 
 	}
 
