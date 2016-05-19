@@ -1,6 +1,5 @@
 package de.hhn.se.embedded.zigbee.raumserver;
 
-import java.text.DecimalFormat;
 import java.util.Observable;
 import java.util.Random;
 
@@ -17,9 +16,10 @@ public class DummyTemperatureSensor extends Observable implements
 
 	public void setTemp(Float temp) {
 		if (temp != null && !temp.equals(this.temp)) {
+			Float oldVal = this.temp;
 			this.temp = temp;
 			setChanged();
-			notifyObservers();
+			notifyObservers(oldVal);
 		}
 	}
 

@@ -1,8 +1,11 @@
-package de.hhn.se.embedded.zigbee.raumserver;
+package de.hhn.se.embedded.zigbee.raumserver.domain;
 
+import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Table;
 
-
+@Entity
+@Table(name = "Device")
 public class Device {
 	public enum Type {
 		HEATING, SWITCH
@@ -19,7 +22,17 @@ public class Device {
 	
 	private Float targetValue;
 	
-    public Float getValue() {
+	private String zigBeeAddress;
+	
+    public String getZigBeeAddress() {
+		return zigBeeAddress;
+	}
+
+	public void setZigBeeAddress(String zigBeeAddress) {
+		this.zigBeeAddress = zigBeeAddress;
+	}
+
+	public Float getValue() {
 		return value;
 	}
 

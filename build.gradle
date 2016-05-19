@@ -18,11 +18,17 @@ jar {
 }
 
 repositories {
+	maven { url "http://ftp1.digi.com/support/m-repo" }
+    jcenter()
     mavenCentral()
 }
 
 sourceCompatibility = 1.7
 targetCompatibility = 1.7
+
+configurations {
+ compile.exclude module:'slf4j-jdk14'
+}
 
 dependencies {
     compile("org.springframework.boot:spring-boot-starter-amqp")
@@ -33,6 +39,10 @@ dependencies {
     compile("org.springframework.boot:spring-boot-starter-data-jpa")
     compile("org.springframework:spring-messaging")
     compile("org.hsqldb:hsqldb:2.3.2");
+    compile group: 'com.pi4j', name: 'pi4j-core', version: '1.0'
+    compile group: 'com.digi.xbee', name: 'xbjlib', version: '1.0.1'
+    compile group: 'org.rxtx', name: 'rxtx-native', version: '2.2', classifier: 'linux_x86_64'
+    
     
     testCompile("junit:junit")
 }
