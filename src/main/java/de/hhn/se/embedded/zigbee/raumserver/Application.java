@@ -90,14 +90,14 @@ public class Application {
 
 	@Bean
 	TemperatureSensor temperatureSensor() {
-		 return new DummyTemperatureSensor();
-//		try {
-//			return new TemperatureSensorImpl();
-//		} catch (Exception e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		return null;
+		try {
+//			return new DummyTemperatureSensor();
+			return new TemperatureSensorImpl();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	@Bean

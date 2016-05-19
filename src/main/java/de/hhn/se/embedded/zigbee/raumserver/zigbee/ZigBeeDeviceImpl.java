@@ -35,6 +35,7 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 	String roomId;
 
 	private static final String PORT = "/dev/ttyS80";
+	// private static final String PORT = "/dev/ttyACM0";
 	private static final int BAUD_RATE = 9600;
 
 	XBeeDevice myDevice;
@@ -45,6 +46,7 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 		myDevice = new XBeeDevice(PORT, BAUD_RATE);
 		try {
 			myDevice.open();
+			myDevice.setReceiveTimeout(15000);
 			myXBeeNetwork = myDevice.getNetwork();
 			myXBeeNetwork.addDiscoveryListener(this);
 			myDevice.addDataListener(this);
@@ -88,20 +90,6 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 	public void deviceDiscovered(RemoteXBeeDevice discoveredDevice) {
 		System.out.format(">> Device discovered: %s%n",
 				discoveredDevice.toString());
-		String address = discoveredDevice.get64BitAddress().toString();
-		Device d = this.deviceRepository.findByZigBeeAddress(address);
-		if (d == null) {
-			RemoteXBeeDevice remote = this.myXBeeNetwork
-					.getDevice(new XBee64BitAddress(address));
-			byte[] data = { 2, 0, 0 };
-			try {
-				this.myDevice.sendData(remote, data);
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-		}
 
 	}
 
@@ -129,6 +117,25 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 	public void discoveryFinished(String error) {
 		if (error == null) {
 			System.out.println(">> Discovery process finished successfully.");
+
+			for (RemoteXBeeDevice discoveredDevice : this.myXBeeNetwork
+					.getDevices()) {
+				String address = discoveredDevice.get64BitAddress().toString();
+				Device d = this.deviceRepository.findByZigBeeAddress(address);
+				if (d == null) {
+					RemoteXBeeDevice remote = this.myXBeeNetwork
+							.getDevice(new XBee64BitAddress(address));
+					byte[] data = { 2, 0, 0 };
+					try {
+						this.myDevice.sendData(remote, data);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+
+				}
+			}
+
 		} else {
 			System.out
 					.println(">> Discovery process finished due to the following error: "
@@ -151,10 +158,11 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 
 	@Override
 	public void dataReceived(XBeeMessage xbeeMessage) {
-		System.out.format("Received data from %s >> %s\n", xbeeMessage.getDevice()
-				.get64BitAddress(), HexUtils.prettyHexString(HexUtils
-				.byteArrayToHexString(xbeeMessage.getData())));
-//		System.out.println();
+		System.out.format("Received data from %s >> %s\n", xbeeMessage
+				.getDevice().get64BitAddress(), HexUtils
+				.prettyHexString(HexUtils.byteArrayToHexString(xbeeMessage
+						.getData())));
+		// System.out.println();
 
 		byte[] data = xbeeMessage.getData();
 		byte cmd = data[0];
@@ -163,7 +171,7 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 
 		if (cmd == 3) {
 
-			String type = arg2 == 1 ? "THERMOSTAT" : "SWITCH";
+			String type = arg1 == 1 ? "THERMOSTAT" : "SWITCH";
 
 			String address = xbeeMessage.getDevice().get64BitAddress()
 					.toString();
@@ -178,6 +186,7 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 				if ("THERMOSTAT".equals(type)) {
 					Device heating = new Device();
 					heating.setDeviceId(this.roomId + "_HEATING");
+					heating.setType("HEATING");
 					this.userService.registerDevice(heating);
 					this.deviceRepository.save(heating);
 				} else {
