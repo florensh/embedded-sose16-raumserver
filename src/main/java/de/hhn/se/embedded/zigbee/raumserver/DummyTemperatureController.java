@@ -84,12 +84,6 @@ public class DummyTemperatureController implements TemperatureController,
 	private void handleTemperatureChange(Float temp, Float oldTemp) {
 		DecimalFormat df = new DecimalFormat("#.#");
 
-		if (oldTemp != null) {
-			// LOGGER.info("temperature changed from " + df.format(oldTemp)
-			// + " to " + df.format(temp) + " degrees celcius");
-
-		}
-
 		sendNewTemperatureToBackend(temp);
 		controlHeating(temp, this.targetTemperature);
 
@@ -124,37 +118,11 @@ public class DummyTemperatureController implements TemperatureController,
 		Device heating = this.deviceRepository.findOne(roomserverId + "_"
 				+ Type.HEATING.name());
 		if (heating != null) {
-
-			heating.setValue(temp);
-			this.deviceService.updateDevice(heating);
-
-			// Configuration token = configurationRepository
-			// .findByParamName("authToken");
-			//
-			// if (token != null) {
-			// MultiValueMap<String, String> headers = new
-			// LinkedMultiValueMap<String, String>();
-			// headers.add("X-AUTH-TOKEN", token.getParamValue());
-			// RestTemplate restTemplate = new RestTemplate();
-			// restTemplate.getMessageConverters().add(
-			// new MappingJackson2HttpMessageConverter());
-			//
-			// String deviceUri = backend + "/api/rooms/" + roomserverId
-			// + "/devices/" + heating.getDeviceId();
-			// Device d = new Device();
-			// d.setValue(temp);
-			//
-			// HttpClient httpClient = HttpClients.createDefault();
-			// restTemplate
-			// .setRequestFactory(new HttpComponentsClientHttpRequestFactory(
-			// httpClient));
-			// HttpEntity<Device> deviceRequest = new HttpEntity<Device>(d,
-			// headers);
-			// // restTemplate.put(deviceUri, deviceRequest);
-			// restTemplate.exchange(deviceUri, HttpMethod.PATCH,
-			// deviceRequest, Device.class);
-			//
-			// }
+			this.LOGGER.info("sending temperature to backend");
+			Device d = new Device();
+			d.setDeviceId(heating.getDeviceId());
+			d.setValue(temp);
+			this.deviceService.updateDevice(d);
 
 		}
 

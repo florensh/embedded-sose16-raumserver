@@ -15,7 +15,7 @@ import com.pi4j.system.SystemInfo;
 public class TemperatureSensorImpl extends Observable implements
 		TemperatureSensor {
 
-	private static final float TEMPERATURE_CORRECTION = -4.0f;
+	private static final float TEMPERATURE_CORRECTION = -0.0f;
 	private I2CBus bus = null;
 	private I2CDevice device = null;
 
