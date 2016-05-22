@@ -7,26 +7,16 @@ import java.util.Observer;
 
 import javax.annotation.PostConstruct;
 
-import org.apache.http.client.HttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 
-import com.digi.xbee.api.exceptions.TimeoutException;
-import com.digi.xbee.api.exceptions.XBeeException;
-
-import de.hhn.se.embedded.zigbee.raumserver.domain.Configuration;
 import de.hhn.se.embedded.zigbee.raumserver.domain.ConfigurationRepository;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Device;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Device.Type;
 import de.hhn.se.embedded.zigbee.raumserver.domain.DeviceRepository;
+import de.hhn.se.embedded.zigbee.raumserver.zigbee.DeviceService;
 import de.hhn.se.embedded.zigbee.raumserver.zigbee.ZigBeeDevice;
 
 public class DummyTemperatureController implements TemperatureController,
@@ -36,6 +26,9 @@ public class DummyTemperatureController implements TemperatureController,
 	String localhost = "http://localhost:8081";
 
 	String backend = cloudBackend;
+
+	@Autowired
+	private DeviceService deviceService;
 
 	@Autowired
 	private TemperatureSensor tempSensor;
@@ -54,43 +47,28 @@ public class DummyTemperatureController implements TemperatureController,
 	@Value("${roomserver.id}")
 	String roomserverId;
 
+	private final Logger LOGGER = LoggerFactory
+			.getLogger(TemperatureController.class);
+
 	@Override
 	public void setNewTargetTemperature(float temp) {
-		if (temp != this.targetTemperature) {
-			this.targetTemperature = temp;
-			this.controlHeating(this.tempSensor.getTemp(),
-					this.targetTemperature);
+		try {
+			if (temp != this.targetTemperature) {
+				this.targetTemperature = temp;
+				this.controlHeating(this.tempSensor.getTemp(),
+						this.targetTemperature);
 
+			}
+		} catch (Exception e) {
+			this.LOGGER.error("Error while setting new target temperature!", e);
 		}
 
 	}
 
 	@PostConstruct
 	private void doTempControlling() {
-
 		this.tempSensor.addObserver(this);
-
-		// (new Thread(new MyRunnable())).start();
 	}
-
-	// class MyRunnable implements Runnable {
-	//
-	// public void run() {
-	// while (true) {
-	//
-	// System.out
-	// .println("calibrating heating, current temperature is "
-	// + tempSensor.getTemp() + ". Target is "
-	// + targetTemperature);
-	//
-	// try {
-	// Thread.sleep(60000);
-	// } catch (InterruptedException e) {
-	// e.printStackTrace();
-	// }
-	// }
-	// }
-	// }
 
 	@Override
 	public void update(Observable arg0, Object arg1) {
@@ -107,8 +85,8 @@ public class DummyTemperatureController implements TemperatureController,
 		DecimalFormat df = new DecimalFormat("#.#");
 
 		if (oldTemp != null) {
-			System.out.println("temperature changed from " + df.format(oldTemp)
-					+ " to " + df.format(temp) + " degrees celcius");
+			// LOGGER.info("temperature changed from " + df.format(oldTemp)
+			// + " to " + df.format(temp) + " degrees celcius");
 
 		}
 
@@ -118,11 +96,13 @@ public class DummyTemperatureController implements TemperatureController,
 	}
 
 	private void controlHeating(Float temp, Float target) {
-		System.out.println("calibrating heating to target " + target
-				+ " current is " + temp);
+
 		List<Device> thermostats = this.deviceRepository
 				.findByType("THERMOSTAT");
 		if (thermostats != null && !thermostats.isEmpty()) {
+			LOGGER.info("calibrating heating with " + thermostats.size()
+					+ " thermostats [target: " + target + " / current: " + temp
+					+ "]");
 
 			byte val = (byte) (temp < target ? 100 : 0);
 
@@ -144,32 +124,37 @@ public class DummyTemperatureController implements TemperatureController,
 		Device heating = this.deviceRepository.findOne(roomserverId + "_"
 				+ Type.HEATING.name());
 		if (heating != null) {
-			Configuration token = configurationRepository
-					.findByParamName("authToken");
 
-			if (token != null) {
-				MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
-				headers.add("X-AUTH-TOKEN", token.getParamValue());
-				RestTemplate restTemplate = new RestTemplate();
-				restTemplate.getMessageConverters().add(
-						new MappingJackson2HttpMessageConverter());
+			heating.setValue(temp);
+			this.deviceService.updateDevice(heating);
 
-				String deviceUri = backend + "/api/rooms/" + roomserverId
-						+ "/devices/" + heating.getDeviceId();
-				Device d = new Device();
-				d.setValue(temp);
-
-				HttpClient httpClient = HttpClients.createDefault();
-				restTemplate
-						.setRequestFactory(new HttpComponentsClientHttpRequestFactory(
-								httpClient));
-				HttpEntity<Device> deviceRequest = new HttpEntity<Device>(d,
-						headers);
-				// restTemplate.put(deviceUri, deviceRequest);
-				restTemplate.exchange(deviceUri, HttpMethod.PATCH,
-						deviceRequest, Device.class);
-
-			}
+			// Configuration token = configurationRepository
+			// .findByParamName("authToken");
+			//
+			// if (token != null) {
+			// MultiValueMap<String, String> headers = new
+			// LinkedMultiValueMap<String, String>();
+			// headers.add("X-AUTH-TOKEN", token.getParamValue());
+			// RestTemplate restTemplate = new RestTemplate();
+			// restTemplate.getMessageConverters().add(
+			// new MappingJackson2HttpMessageConverter());
+			//
+			// String deviceUri = backend + "/api/rooms/" + roomserverId
+			// + "/devices/" + heating.getDeviceId();
+			// Device d = new Device();
+			// d.setValue(temp);
+			//
+			// HttpClient httpClient = HttpClients.createDefault();
+			// restTemplate
+			// .setRequestFactory(new HttpComponentsClientHttpRequestFactory(
+			// httpClient));
+			// HttpEntity<Device> deviceRequest = new HttpEntity<Device>(d,
+			// headers);
+			// // restTemplate.put(deviceUri, deviceRequest);
+			// restTemplate.exchange(deviceUri, HttpMethod.PATCH,
+			// deviceRequest, Device.class);
+			//
+			// }
 
 		}
 

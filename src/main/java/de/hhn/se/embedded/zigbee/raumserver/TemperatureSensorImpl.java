@@ -3,7 +3,9 @@ package de.hhn.se.embedded.zigbee.raumserver;
 import java.io.IOException;
 import java.util.Observable;
 
-import javax.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import com.pi4j.io.i2c.I2CBus;
 import com.pi4j.io.i2c.I2CDevice;
@@ -13,9 +15,11 @@ import com.pi4j.system.SystemInfo;
 public class TemperatureSensorImpl extends Observable implements
 		TemperatureSensor {
 
-	private static final float TEMPERATURE_CORRECTION = - 4.0f;
+	private static final float TEMPERATURE_CORRECTION = -4.0f;
 	private I2CBus bus = null;
 	private I2CDevice device = null;
+
+	private final Logger LOGGER = LoggerFactory.getLogger(TemperatureSensor.class);
 
 	public TemperatureSensorImpl() throws IOException, InterruptedException {
 		int sensorAddress = 0x48;
@@ -42,37 +46,16 @@ public class TemperatureSensorImpl extends Observable implements
 		}
 	}
 
-	@PostConstruct
-	private void startReadThread() {
-		Thread t = new Thread(new SensorReader());
-		t.setDaemon(true);
-		t.start();
 
-	}
 
-	class SensorReader implements Runnable {
-
-		@Override
-		public void run() {
-
-			while (true) {
-
-				try {
-					double temp = getTemperature();
-					setTemp((float) temp);
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-
-				try {
-					Thread.sleep(5000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-
-			}
-
+	@Scheduled(fixedDelay = 5000)
+	private void readTemp() {
+		double temp;
+		try {
+			temp = getTemperature();
+			setTemp((float) temp);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 
 	}

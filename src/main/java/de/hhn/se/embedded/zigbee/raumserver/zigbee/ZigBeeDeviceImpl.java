@@ -4,8 +4,12 @@ import java.util.UUID;
 
 import javax.annotation.PostConstruct;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import com.digi.xbee.api.RemoteXBeeDevice;
 import com.digi.xbee.api.XBeeDevice;
@@ -18,6 +22,7 @@ import com.digi.xbee.api.models.XBee64BitAddress;
 import com.digi.xbee.api.models.XBeeMessage;
 import com.digi.xbee.api.utils.HexUtils;
 
+import de.hhn.se.embedded.zigbee.raumserver.TemperatureController;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Device;
 import de.hhn.se.embedded.zigbee.raumserver.domain.DeviceRepository;
 import de.hhn.se.embedded.zigbee.raumserver.web.UserService;
@@ -29,10 +34,15 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 	DeviceRepository deviceRepository;
 
 	@Autowired
+	DeviceService deviceService;
+
+	@Autowired
 	UserService userService;
 
 	@Value("${roomserver.id}")
 	String roomId;
+
+	private final Logger LOGGER = LoggerFactory.getLogger(ZigBeeDevice.class);
 
 	private static final String PORT = "/dev/ttyS80";
 	// private static final String PORT = "/dev/ttyACM0";
@@ -50,9 +60,7 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 			myXBeeNetwork = myDevice.getNetwork();
 			myXBeeNetwork.addDiscoveryListener(this);
 			myDevice.addDataListener(this);
-			Thread t = new Thread(new MyRunnable());
-			t.setDaemon(true);
-			t.start();
+
 		} catch (XBeeException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -61,22 +69,9 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 
 	}
 
-	class MyRunnable implements Runnable {
-
-		@Override
-		public void run() {
-			while (true) {
-				try {
-					myXBeeNetwork.startDiscoveryProcess();
-					Thread.sleep(60000);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-
-		}
-
+	@Scheduled(fixedDelay = 120000)
+	private void runDiscovery() {
+		myXBeeNetwork.startDiscoveryProcess();
 	}
 
 	/*
@@ -88,8 +83,7 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 	 */
 	@Override
 	public void deviceDiscovered(RemoteXBeeDevice discoveredDevice) {
-		System.out.format(">> Device discovered: %s%n",
-				discoveredDevice.toString());
+		LOGGER.info("Device discovered: " + discoveredDevice.toString());
 
 	}
 
@@ -116,18 +110,21 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 	@Override
 	public void discoveryFinished(String error) {
 		if (error == null) {
-			System.out.println(">> Discovery process finished successfully.");
+			LOGGER.info("Discovery process finished successfully - "
+					+ this.myXBeeNetwork.getDevices().size()
+					+ " devices in network");
 
 			for (RemoteXBeeDevice discoveredDevice : this.myXBeeNetwork
 					.getDevices()) {
 				String address = discoveredDevice.get64BitAddress().toString();
 				Device d = this.deviceRepository.findByZigBeeAddress(address);
 				if (d == null) {
+					LOGGER.info("Sending status request to " + address);
 					RemoteXBeeDevice remote = this.myXBeeNetwork
 							.getDevice(new XBee64BitAddress(address));
 					byte[] data = { 2, 0, 0 };
 					try {
-						this.myDevice.sendData(remote, data);
+						this.sendMessage(remote, data);
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -145,38 +142,48 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 	}
 
 	@Override
-	public void sendValue(String address, byte value) throws TimeoutException,
-			XBeeException {
+	public void sendValue(String address, byte value) {
 		RemoteXBeeDevice remote = this.myXBeeNetwork
 				.getDevice(new XBee64BitAddress(address));
 		if (remote != null) {
 			byte[] data = { 1, value, 0 };
+			this.sendMessage(remote, data);
+
+		}
+	}
+
+	private void sendMessage(RemoteXBeeDevice remote, byte[] data) {
+		LOGGER.info("sending message to " + remote.get64BitAddress().toString()
+				+ " >> " + HexUtils.prettyHexString(data));
+		try {
 			this.myDevice.sendData(remote, data);
+		} catch (XBeeException e) {
+			this.LOGGER.error("Error while sending message", e);
 		}
 
 	}
 
 	@Override
 	public void dataReceived(XBeeMessage xbeeMessage) {
-		System.out.format("Received data from %s >> %s\n", xbeeMessage
-				.getDevice().get64BitAddress(), HexUtils
-				.prettyHexString(HexUtils.byteArrayToHexString(xbeeMessage
-						.getData())));
-		// System.out.println();
 
 		byte[] data = xbeeMessage.getData();
 		byte cmd = data[0];
 		byte arg1 = data[1];
 		byte arg2 = data[2];
+		String type = arg1 == 1 ? "THERMOSTAT" : "SWITCH";
+		LOGGER.info("Received status from "
+				+ xbeeMessage.getDevice().get64BitAddress() + ": [" + type
+				+ " " + (float) arg2 + "]");
 
 		if (cmd == 3) {
 
-			String type = arg1 == 1 ? "THERMOSTAT" : "SWITCH";
-
 			String address = xbeeMessage.getDevice().get64BitAddress()
 					.toString();
+
 			Device d = this.deviceRepository.findByZigBeeAddress(address);
 			if (d == null) {
+				LOGGER.info(xbeeMessage.getDevice().get64BitAddress()
+						+ " is unknown, registering to backend");
 				d = new Device();
 				UUID deviceId = UUID.randomUUID();
 				d.setDeviceId(deviceId.toString());
@@ -187,20 +194,41 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 					Device heating = new Device();
 					heating.setDeviceId(this.roomId + "_HEATING");
 					heating.setType("HEATING");
-					this.userService.registerDevice(heating);
+					heating.setTargetValue(TemperatureController.DEFAULT_TEMPERATURE);
+					this.registerDevice(heating);
+
 					this.deviceRepository.save(heating);
 				} else {
-					this.userService.registerDevice(d);
-
+					d.setTargetValueOnDevice((float) arg2);
+					d.setValue((float) arg2);
+					this.registerDevice(d);
 				}
 
 				this.deviceRepository.save(d);
+
+			} else {
+				if (!"THERMOSTAT".equals(type)) {
+					d.setTargetValueOnDevice((float) arg2);
+					this.updateDevice(d);
+				}
 
 			}
 
 		} else {
 			System.out.println("Unknown cmd!");
 		}
+	}
+
+	@Async
+	private void registerDevice(Device d) {
+		this.userService.registerDevice(d);
+
+	}
+
+	@Async
+	private void updateDevice(Device d) {
+		this.deviceService.updateDevice(d);
+
 	}
 
 }

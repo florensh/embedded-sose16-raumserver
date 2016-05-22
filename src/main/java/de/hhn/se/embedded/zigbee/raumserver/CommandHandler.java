@@ -1,15 +1,16 @@
 package de.hhn.se.embedded.zigbee.raumserver;
 
-import java.io.IOException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.hhn.se.embedded.zigbee.raumserver.domain.Device;
-import de.hhn.se.embedded.zigbee.raumserver.domain.DeviceRepository;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Device.Type;
+import de.hhn.se.embedded.zigbee.raumserver.domain.DeviceRepository;
+import de.hhn.se.embedded.zigbee.raumserver.zigbee.DeviceService;
 import de.hhn.se.embedded.zigbee.raumserver.zigbee.ZigBeeDevice;
 
 public class CommandHandler {
@@ -20,6 +21,9 @@ public class CommandHandler {
 	@Autowired
 	private DeviceRepository deviceRepository;
 
+	@Autowired
+	private DeviceService deviceService;
+
 	@Value("${roomserver.id}")
 	String roomId;
 
@@ -28,34 +32,26 @@ public class CommandHandler {
 	@Autowired
 	private ZigBeeDevice zigBeeDevice;
 
-	// public void handleMessage(String message) {
-	// System.out.println("Received <" + message + ">");
-	// try {
-	// Command command = objectMapper.readValue(message, Command.class);
-	//
-	// if(command.getTargetDevice().equalsIgnoreCase(roomId+"_HEATING")){
-	// if(command.getType().equals(CommandType.SET.name())){
-	// this.temperatureController.setNewTargetTemperature(command.getValue());
-	// }
-	// }
-	//
-	// } catch (IOException e) {
-	// // TODO Auto-generated catch block
-	// e.printStackTrace();
-	// }
-	//
-	//
-	//
-	// }
+	private final Logger LOGGER = LoggerFactory.getLogger(CommandHandler.class);
 
 	public void handleMessage(String message) {
-		System.out.println("Received <" + message + ">");
 		try {
 			Device device = objectMapper.readValue(message, Device.class);
+			String logMsg = "Received device update [id: "
+					+ device.getDeviceId() + " / target value: "
+					+ device.getTargetValue() + "]";
+			LOGGER.info(logMsg);
 
 			if (device.getType().equals(Type.HEATING.name())) {
 				this.temperatureController.setNewTargetTemperature(device
 						.getTargetValue());
+
+				// ACK to Backend!
+				Device toSend = new Device();
+				toSend.setDeviceId(device.getDeviceId());
+				toSend.setTargetValueOnDevice(device.getTargetValue());
+				this.deviceService.updateDevice(toSend);
+
 			} else {
 				Device fromDb = this.deviceRepository.findOne(device
 						.getDeviceId());

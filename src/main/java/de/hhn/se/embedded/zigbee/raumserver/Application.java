@@ -16,6 +16,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.bind.annotation.RestController;
 
 import de.hhn.se.embedded.zigbee.raumserver.web.UserService;
@@ -25,6 +27,8 @@ import de.hhn.se.embedded.zigbee.raumserver.zigbee.ZigBeeDeviceImpl;
 @RestController
 @SpringBootApplication
 @EnableJpaRepositories(basePackages = "de.hhn.se.embedded.zigbee.raumserver.domain")
+@EnableAsync
+@EnableScheduling
 public class Application {
 
 	@Value("${roomserver.id}")

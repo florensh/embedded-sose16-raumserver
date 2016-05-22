@@ -16,7 +16,6 @@ import de.hhn.se.embedded.zigbee.raumserver.User;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Configuration;
 import de.hhn.se.embedded.zigbee.raumserver.domain.ConfigurationRepository;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Device;
-import de.hhn.se.embedded.zigbee.raumserver.domain.Device.Type;
 
 @Service
 public class UserService {

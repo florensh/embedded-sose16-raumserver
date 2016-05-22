@@ -24,6 +24,16 @@ public class Device {
 	
 	private String zigBeeAddress;
 	
+	private Float targetValueOnDevice;
+
+	public Float getTargetValueOnDevice() {
+		return targetValueOnDevice;
+	}
+
+	public void setTargetValueOnDevice(Float targetValueOnDevice) {
+		this.targetValueOnDevice = targetValueOnDevice;
+	}
+	
     public String getZigBeeAddress() {
 		return zigBeeAddress;
 	}
