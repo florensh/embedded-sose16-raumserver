@@ -11,11 +11,14 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'spring-boot'
+apply plugin: 'application'
 
 jar {
     baseName = 'roomserver'
     version =  '0.1.0'
 }
+
+mainClassName = "de.hhn.se.embedded.zigbee.raumserver.Application"
 
 repositories {
 	maven { url "http://ftp1.digi.com/support/m-repo" }
@@ -37,6 +40,9 @@ dependencies {
     compile("org.springframework.boot:spring-boot-starter-thymeleaf")
     compile("org.springframework.boot:spring-boot-starter-security")
     compile("org.springframework.boot:spring-boot-starter-data-jpa")
+    compile("org.springframework.boot:spring-boot-starter-actuator")
+	compile group: 'com.pi4j', name: 'pi4j-core', version: '1.0'
+    
     compile("org.springframework:spring-messaging")
     compile("org.hsqldb:hsqldb:2.3.2");
     compile group: 'com.pi4j', name: 'pi4j-core', version: '1.0'

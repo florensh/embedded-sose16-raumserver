@@ -1,5 +1,9 @@
 package de.hhn.se.embedded.zigbee.raumserver;
 
+import java.util.concurrent.Future;
+
+import javax.annotation.PreDestroy;
+
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -13,16 +17,24 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.system.ApplicationPidFileWriter;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pi4j.io.gpio.GpioController;
+import com.pi4j.io.gpio.GpioFactory;
+import com.pi4j.io.gpio.GpioPinDigitalOutput;
+import com.pi4j.io.gpio.PinState;
+import com.pi4j.io.gpio.RaspiPin;
+
 import de.hhn.se.embedded.zigbee.raumserver.web.UserService;
-import de.hhn.se.embedded.zigbee.raumserver.zigbee.ZigBeeDevice;
-import de.hhn.se.embedded.zigbee.raumserver.zigbee.ZigBeeDeviceImpl;
 
 @RestController
 @SpringBootApplication
@@ -60,6 +72,7 @@ public class Application {
 		container.setConnectionFactory(connectionFactory);
 		container.setQueueNames(queueName);
 		container.setMessageListener(listenerAdapter);
+
 		return container;
 	}
 
@@ -78,30 +91,61 @@ public class Application {
 		return new MessageListenerAdapter(receiver, "handleMessage");
 	}
 
-	public static void main(String[] args) throws InterruptedException {
-		SpringApplication.run(Application.class, args);
+	// public static void main(String[] args) throws InterruptedException {
+	// SpringApplication.run(Application.class, args);
+	// }
+
+	static Future ledFuture;
+
+	static GpioPinDigitalOutput led;
+
+	public static void main(String[] args) {
+
+		ConfigurableApplicationContext ctx = null;
+
+		final GpioController gpio = GpioFactory.getInstance();
+		// provision gpio pins #01 as an output pin and make sure is is set
+		// to
+		// LOW at startup
+		led = gpio.provisionDigitalOutputPin(RaspiPin.GPIO_01, // PIN NUMBER
+				"My LED", // PIN FRIENDLY NAME (optional)
+				PinState.LOW); // PIN STARTUP STATE (optional)
+
+		ledFuture = led.blink(1000, PinState.HIGH);
+
+		SpringApplication springApplication = new SpringApplication(
+				Application.class);
+
+		springApplication.addListeners(new ApplicationPidFileWriter(
+				"RoomServer.pid"));
+		ctx = springApplication.run(args);
+		ctx.registerShutdownHook();
+
 	}
 
 	@Bean
-	TemperatureController temperatureController() {
-		return new DummyTemperatureController();
-	}
-	
-	@Bean
-	ZigBeeDevice zigBeeDevice(){
-		return new ZigBeeDeviceImpl();
-	}
+	public ApplicationListener stopLEDBean() {
+		return new ApplicationListener() {
 
-	@Bean
-	TemperatureSensor temperatureSensor() {
-		try {
-//			return new DummyTemperatureSensor();
-			return new TemperatureSensorImpl();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
+			@PreDestroy
+			private void setLedOff() {
+				if(led != null){
+					led.setState(PinState.LOW);
+					
+				}
+			}
+
+			@Override
+			public void onApplicationEvent(ApplicationEvent event) {
+				if(ledFuture != null && led != null){
+					ledFuture.cancel(true);
+					led.setState(PinState.HIGH);
+					
+				}
+
+			}
+		};
+
 	}
 
 	@Bean

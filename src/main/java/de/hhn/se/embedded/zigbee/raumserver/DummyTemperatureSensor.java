@@ -3,7 +3,7 @@ package de.hhn.se.embedded.zigbee.raumserver;
 import java.util.Observable;
 import java.util.Random;
 
-import javax.annotation.PostConstruct;
+import org.springframework.scheduling.annotation.Scheduled;
 
 public class DummyTemperatureSensor extends Observable implements
 		TemperatureSensor {
@@ -23,38 +23,21 @@ public class DummyTemperatureSensor extends Observable implements
 		}
 	}
 
-	@PostConstruct
-	private void createDummyData() {
-		Thread t = new Thread(new DummyDataCreator());
-		t.setDaemon(true);
-		t.start();
+
+
+	@Scheduled(fixedDelay = 5000)
+	private void readTemp() {
+		double temp;
+		float minX = 18.0f;
+		float maxX = 19.0f;
+
+		Random rand = new Random();
+
+		float finalX = rand.nextFloat() * (maxX - minX) + minX;
+		setTemp(finalX);
 
 	}
 
-	class DummyDataCreator implements Runnable {
 
-		@Override
-		public void run() {
-
-			while (true) {
-				float minX = 22.0f;
-				float maxX = 23.0f;
-
-				Random rand = new Random();
-
-				float finalX = rand.nextFloat() * (maxX - minX) + minX;
-				setTemp(finalX);
-
-				try {
-					Thread.sleep(5000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-
-			}
-
-		}
-
-	}
 
 }

@@ -13,6 +13,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import de.hhn.se.embedded.zigbee.raumserver.LEDController;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Configuration;
 import de.hhn.se.embedded.zigbee.raumserver.domain.ConfigurationRepository;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Device;
@@ -25,6 +26,9 @@ public class DeviceService {
 	String localhost = "http://localhost:8081";
 
 	String backend = cloudBackend;
+	
+	@Autowired
+	LEDController ledController;
 
 	@Value("${roomserver.id}")
 	String roomId;
@@ -39,6 +43,8 @@ public class DeviceService {
 
 		Configuration token = configurationRepository
 				.findByParamName("authToken");
+		
+		this.ledController.startFlashingFast();
 
 		if (token != null) {
 			MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
@@ -54,12 +60,13 @@ public class DeviceService {
 			d.setTargetValueOnDevice(device.getTargetValueOnDevice());
 
 			HttpClient httpClient = HttpClients.createDefault();
+			
 			restTemplate
 					.setRequestFactory(new HttpComponentsClientHttpRequestFactory(
 							httpClient));
 			HttpEntity<Device> deviceRequest = new HttpEntity<Device>(d,
 					headers);
-			// restTemplate.put(deviceUri, deviceRequest);
+
 			restTemplate.exchange(deviceUri, HttpMethod.PATCH, deviceRequest,
 					Device.class);
 

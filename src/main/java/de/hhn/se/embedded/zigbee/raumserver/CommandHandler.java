@@ -20,6 +20,9 @@ public class CommandHandler {
 
 	@Autowired
 	private DeviceRepository deviceRepository;
+	
+	@Autowired
+	LEDController ledController;
 
 	@Autowired
 	private DeviceService deviceService;
@@ -35,6 +38,9 @@ public class CommandHandler {
 	private final Logger LOGGER = LoggerFactory.getLogger(CommandHandler.class);
 
 	public void handleMessage(String message) {
+		
+		this.ledController.startFlashingFast();
+		
 		try {
 			Device device = objectMapper.readValue(message, Device.class);
 			String logMsg = "Received device update [id: "

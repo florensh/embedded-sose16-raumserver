@@ -1,0 +1,9 @@
+14:43:06.283 [main      ] INFO   o.springframework.boot.StartupInfoLogger:48  - Starting Application on Precision-M6500 with PID 19579 (/home/florens/Studium/Embedded/embedded-sose16-raumserver/bin started by florens in /home/florens/Studium/Embedded/embedded-sose16-raumserver)
+14:43:06.289 [main      ] INFO   o.springframework.boot.SpringApplication:670 - The following profiles are active: dev
+14:43:23.746 [5-thread-1] INFO    d.h.s.e.z.r.CommonTemperatureController:141 - sending temperature to backend
+14:43:23.815 [main      ] INFO   o.springframework.boot.StartupInfoLogger:57  - Started Application in 18.015 seconds (JVM running for 18.585)
+14:43:24.882 [5-thread-1] INFO    d.h.s.e.z.r.CommonTemperatureController:141 - sending temperature to backend
+14:43:29.885 [5-thread-1] INFO    d.h.s.e.z.r.CommonTemperatureController:141 - sending temperature to backend
+14:43:35.503 [5-thread-1] INFO    d.h.s.e.z.r.CommonTemperatureController:141 - sending temperature to backend
+14:43:36.185 [5-thread-1] INFO    d.h.s.e.z.r.CommonTemperatureController:141 - sending temperature to backend
+14:43:42.400 [5-thread-1] INFO    d.h.s.e.z.r.CommonTemperatureController:141 - sending temperature to backend

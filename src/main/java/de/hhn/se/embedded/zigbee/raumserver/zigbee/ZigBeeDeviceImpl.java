@@ -1,5 +1,7 @@
 package de.hhn.se.embedded.zigbee.raumserver.zigbee;
 
+import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.util.UUID;
 
 import javax.annotation.PostConstruct;
@@ -8,13 +10,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import com.digi.xbee.api.RemoteXBeeDevice;
 import com.digi.xbee.api.XBeeDevice;
 import com.digi.xbee.api.XBeeNetwork;
-import com.digi.xbee.api.exceptions.TimeoutException;
 import com.digi.xbee.api.exceptions.XBeeException;
 import com.digi.xbee.api.listeners.IDataReceiveListener;
 import com.digi.xbee.api.listeners.IDiscoveryListener;
@@ -22,7 +25,9 @@ import com.digi.xbee.api.models.XBee64BitAddress;
 import com.digi.xbee.api.models.XBeeMessage;
 import com.digi.xbee.api.utils.HexUtils;
 
+import de.hhn.se.embedded.zigbee.raumserver.LEDController;
 import de.hhn.se.embedded.zigbee.raumserver.TemperatureController;
+import de.hhn.se.embedded.zigbee.raumserver.TemperatureSensor;
 import de.hhn.se.embedded.zigbee.raumserver.domain.Device;
 import de.hhn.se.embedded.zigbee.raumserver.domain.DeviceRepository;
 import de.hhn.se.embedded.zigbee.raumserver.web.UserService;
@@ -30,14 +35,25 @@ import de.hhn.se.embedded.zigbee.raumserver.web.UserService;
 public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 		IDataReceiveListener {
 
+	private static final String HEATING_VALVE = "HEATING_ELEMENT";
+
 	@Autowired
 	DeviceRepository deviceRepository;
 
 	@Autowired
 	DeviceService deviceService;
+	
+	@Autowired
+	ApplicationContext ctx;
+	
+	@Autowired
+	LEDController ledController;
 
 	@Autowired
 	UserService userService;
+
+	@Autowired
+	TemperatureSensor temperatureSensor;
 
 	@Value("${roomserver.id}")
 	String roomId;
@@ -65,12 +81,17 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			myDevice.close();
+			File f = new File("/home/pi/RoomServer.pid");
+			f.delete();
+			((ConfigurableApplicationContext) ctx).close();
+			System.exit(1);
 		}
 
 	}
 
-	@Scheduled(fixedDelay = 120000)
+	@Scheduled(fixedDelay = 30000)
 	private void runDiscovery() {
+		LOGGER.info("Discovery process started");
 		myXBeeNetwork.startDiscoveryProcess();
 	}
 
@@ -123,8 +144,9 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 					RemoteXBeeDevice remote = this.myXBeeNetwork
 							.getDevice(new XBee64BitAddress(address));
 					byte[] data = { 2, 0, 0 };
+					String statusRequest = "2/0/0\n";
 					try {
-						this.sendMessage(remote, data);
+						this.sendMessage(remote, statusRequest);
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -141,18 +163,29 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 
 	}
 
+	private static String asciiToHex(String asciiValue) {
+		char[] chars = asciiValue.toCharArray();
+		StringBuffer hex = new StringBuffer();
+		for (int i = 0; i < chars.length; i++) {
+			hex.append(Integer.toHexString((int) chars[i]));
+		}
+		return hex.toString();
+	}
+
 	@Override
 	public void sendValue(String address, byte value) {
 		RemoteXBeeDevice remote = this.myXBeeNetwork
 				.getDevice(new XBee64BitAddress(address));
 		if (remote != null) {
 			byte[] data = { 1, value, 0 };
-			this.sendMessage(remote, data);
+			String message = "1/" + value + "/0\n";
+			this.sendMessage(remote, message);
 
 		}
 	}
 
 	private void sendMessage(RemoteXBeeDevice remote, byte[] data) {
+		this.ledController.startFlashingFast();
 		LOGGER.info("sending message to " + remote.get64BitAddress().toString()
 				+ " >> " + HexUtils.prettyHexString(data));
 		try {
@@ -163,17 +196,48 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 
 	}
 
+	private void sendMessage(RemoteXBeeDevice remote, String str) {
+		this.ledController.startFlashingFast();
+		LOGGER.info("sending message to " + remote.get64BitAddress().toString()
+				+ " >> " + str);
+		try {
+			this.myDevice.sendData(remote, str.getBytes());
+		} catch (XBeeException e) {
+			this.LOGGER.error("Error while sending message", e);
+		}
+
+	}
+
 	@Override
 	public void dataReceived(XBeeMessage xbeeMessage) {
+		
+		this.ledController.startFlashingFast();
+		
 
 		byte[] data = xbeeMessage.getData();
-		byte cmd = data[0];
-		byte arg1 = data[1];
-		byte arg2 = data[2];
-		String type = arg1 == 1 ? "THERMOSTAT" : "SWITCH";
+		// LOGGER.info("Test: " + HexUtils.byteArrayToHexString(data));
+		String message = null;
+		try {
+			message = new String(data, "UTF-8");
+			LOGGER.info("Message is " + message);
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		String[] darr = message.split("/");
+		int cmd = Integer.parseInt(darr[0]);
+		int arg1 = Integer.parseInt(darr[1]);
+		int arg2 = Integer.parseInt(darr[2]);
+
+		LOGGER.info("cmd is: " + cmd);
+		LOGGER.info("arg1 is: " + arg1);
+		LOGGER.info("arg2 is: " + arg2);
+
+		String type = arg1 == 1 ? HEATING_VALVE : "SWITCH";
 		LOGGER.info("Received status from "
 				+ xbeeMessage.getDevice().get64BitAddress() + ": [" + type
-				+ " " + (float) arg2 + "]");
+				+ " " + arg2 + "]");
 
 		if (cmd == 3) {
 
@@ -190,11 +254,12 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 				d.setZigBeeAddress(address);
 				d.setType(type);
 
-				if ("THERMOSTAT".equals(type)) {
+				if (HEATING_VALVE.equals(type)) {
 					Device heating = new Device();
 					heating.setDeviceId(this.roomId + "_HEATING");
 					heating.setType("HEATING");
 					heating.setTargetValue(TemperatureController.DEFAULT_TEMPERATURE);
+					heating.setValue(temperatureSensor.getTemp());
 					this.registerDevice(heating);
 
 					this.deviceRepository.save(heating);
@@ -207,7 +272,7 @@ public class ZigBeeDeviceImpl implements ZigBeeDevice, IDiscoveryListener,
 				this.deviceRepository.save(d);
 
 			} else {
-				if (!"THERMOSTAT".equals(type)) {
+				if (!HEATING_VALVE.equals(type)) {
 					d.setTargetValueOnDevice((float) arg2);
 					this.updateDevice(d);
 				}

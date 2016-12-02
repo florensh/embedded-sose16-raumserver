@@ -80,6 +80,15 @@ public class UserService {
 		restTemplate.getMessageConverters().add(
 				new MappingJackson2HttpMessageConverter());
 
+		if (d.getType().equals(Device.Type.HEATING.toString())) {
+			if(d.getName() == null || d.getName().isEmpty()){
+				d.setName("Heating");
+			}
+			d.setTargetValue(20f);
+		} else if (d.getType().equals(Device.Type.SWITCH.toString())) {
+			d.setTargetValue(0f);
+		}
+
 		String deviceUri = backend + "/api/rooms/" + roomserverId + "/devices/"
 				+ d.getDeviceId();
 
@@ -107,14 +116,15 @@ public class UserService {
 
 		restTemplate.put(roomUri, roomRequest);
 
-//		String deviceUri = backend + "/api/rooms/" + roomserverId + "/devices/"
-//				+ roomserverId + "_" + Type.HEATING.name();
-//		Device d = new Device();
-//		d.setType(Type.HEATING.name());
-//
-//		HttpEntity<Device> deviceRequest = new HttpEntity<Device>(d, headers);
-//		restTemplate.put(deviceUri, deviceRequest);
-
+		// String deviceUri = backend + "/api/rooms/" + roomserverId +
+		// "/devices/"
+		// + roomserverId + "_" + Type.HEATING.name();
+		// Device d = new Device();
+		// d.setType(Type.HEATING.name());
+		//
+		// HttpEntity<Device> deviceRequest = new HttpEntity<Device>(d,
+		// headers);
+		// restTemplate.put(deviceUri, deviceRequest);
 
 	}
 

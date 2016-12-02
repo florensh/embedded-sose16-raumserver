@@ -27,8 +27,7 @@
 
         <encoder>
             <charset>UTF-8</charset>
-            <!--<Pattern>%d{HH:mm:ss.SSS} [%-10.10thread] %-5level %-45.45(%41C{41}:%L) - %msg%n</Pattern>-->
-            <Pattern>%d{HH:mm:ss.SSS} - %msg%n</Pattern>
+            <Pattern>%d{HH:mm:ss.SSS} [%-10.10thread] %-5level %-45.45(%41C{41}:%L) - %msg%n</Pattern>
         </encoder>
     </appender>
 
